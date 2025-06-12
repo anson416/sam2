@@ -141,8 +141,8 @@ class AsyncVideoFrameLoader:
             except Exception as e:
                 self.exception = e
 
-        self.thread = Thread(target=_load_frames, daemon=True)
-        self.thread.start()
+        # self.thread = Thread(target=_load_frames, daemon=True)
+        # self.thread.start()
 
     def __getitem__(self, index):
         if self.exception is not None:
@@ -152,9 +152,7 @@ class AsyncVideoFrameLoader:
         if img is not None:
             return img
 
-        img, video_height, video_width = _load_img_as_tensor(
-            self.img_paths[index], self.image_size
-        )
+        img, video_height, video_width = _load_img_as_tensor(self.img_paths[index], self.image_size)
         self.video_height = video_height
         self.video_width = video_width
         # normalize by mean and std
@@ -162,7 +160,7 @@ class AsyncVideoFrameLoader:
         img /= self.img_std
         if not self.offload_video_to_cpu:
             img = img.to(self.compute_device, non_blocking=True)
-        self.images[index] = img
+        # self.images[index] = img
         return img
 
     def __len__(self):
@@ -205,9 +203,7 @@ def load_video_frames(
             compute_device=compute_device,
         )
     else:
-        raise NotImplementedError(
-            "Only MP4 video and JPEG folder are supported at this moment"
-        )
+        raise NotImplementedError("Only MP4 video and JPEG folder are supported at this moment")
 
 
 def load_video_frames_from_jpg_images(
@@ -240,11 +236,7 @@ def load_video_frames_from_jpg_images(
             "ffmpeg to start the JPEG file from 00000.jpg."
         )
 
-    frame_names = [
-        p
-        for p in os.listdir(jpg_folder)
-        if os.path.splitext(p)[-1] in [".jpg", ".jpeg", ".JPG", ".JPEG"]
-    ]
+    frame_names = [p for p in os.listdir(jpg_folder) if os.path.splitext(p)[-1] in [".jpg", ".jpeg", ".JPG", ".JPEG"]]
     frame_names.sort(key=lambda p: int(os.path.splitext(p)[0]))
     num_frames = len(frame_names)
     if num_frames == 0:
