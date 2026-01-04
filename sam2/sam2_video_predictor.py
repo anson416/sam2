@@ -4,7 +4,11 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
+import sys
 from collections import OrderedDict
+from contextlib import contextmanager
+from typing import Iterator, TextIO
 
 import torch
 import torch.nn.functional as F
@@ -1060,6 +1064,27 @@ class SAM2VideoPredictor(SAM2Base):
                 non_cond_frame_outputs.pop(t, None)
 
 
+@contextmanager
+def redirect_stdout(to: str = os.devnull) -> Iterator[None]:
+    """
+    Reference: https://blender.stackexchange.com/a/270199
+    """
+    fd = sys.stdout.fileno()
+
+    def _redirect_stdout(to: TextIO):
+        sys.stdout.close()  # + implicit flush()
+        os.dup2(to.fileno(), fd)  # fd writes to `to` file
+        sys.stdout = os.fdopen(fd, "w")  # Python writes to fd
+
+    with os.fdopen(os.dup(fd), "w") as old_stdout:
+        with open(to, "w") as file:
+            _redirect_stdout(file)
+        try:
+            yield
+        finally:
+            _redirect_stdout(old_stdout)
+
+
 class SAM2VideoPredictorVOS(SAM2VideoPredictor):
     """Optimized for the VOS setting"""
 
@@ -1069,35 +1094,34 @@ class SAM2VideoPredictorVOS(SAM2VideoPredictor):
 
     def _compile_all_components(self):
         print(
-            "Compiling all components for VOS setting. First time may be very slow."
+            "Compiling all components for VOS setting. "
+            "First time may be very slow."
         )
-        self.memory_encoder.forward = torch.compile(
-            self.memory_encoder.forward,
-            mode="max-autotune",
-            fullgraph=True,
-            dynamic=False,
-        )
-
-        self.memory_attention.forward = torch.compile(
-            self.memory_attention.forward,
-            mode="max-autotune-no-cudagraphs",
-            fullgraph=True,
-            dynamic=True,  # Num. of memories varies
-        )
-
-        self.sam_prompt_encoder.forward = torch.compile(
-            self.sam_prompt_encoder.forward,
-            mode="max-autotune",
-            fullgraph=True,
-            dynamic=False,  # Accuracy regression on True
-        )
-
-        self.sam_mask_decoder.forward = torch.compile(
-            self.sam_mask_decoder.forward,
-            mode="max-autotune",
-            fullgraph=True,
-            dynamic=False,  # Accuracy regression on True
-        )
+        with redirect_stdout():
+            self.memory_encoder.forward = torch.compile(
+                self.memory_encoder.forward,
+                mode="max-autotune",
+                fullgraph=True,
+                dynamic=False,
+            )
+            self.memory_attention.forward = torch.compile(
+                self.memory_attention.forward,
+                mode="max-autotune-no-cudagraphs",
+                fullgraph=True,
+                dynamic=True,  # Num. of memories varies
+            )
+            self.sam_prompt_encoder.forward = torch.compile(
+                self.sam_prompt_encoder.forward,
+                mode="max-autotune",
+                fullgraph=True,
+                dynamic=False,  # Accuracy regression on True
+            )
+            self.sam_mask_decoder.forward = torch.compile(
+                self.sam_mask_decoder.forward,
+                mode="max-autotune",
+                fullgraph=True,
+                dynamic=False,  # Accuracy regression on True
+            )
 
     def forward_image(self, img_batch: torch.Tensor):
         """
