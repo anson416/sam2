@@ -112,7 +112,7 @@ def build_sam2_video_predictor(
     if vos_optimized:
         hydra_overrides = [
             "++model._target_=sam2.sam2_video_predictor.SAM2VideoPredictorVOS",
-            "++model.compile_image_encoder=True",  # Let sam2_base handle this
+            # "++model.compile_image_encoder=True",  # Let sam2_base handle this
         ]
 
     if apply_postprocessing:
