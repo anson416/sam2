@@ -601,6 +601,7 @@ class SAM2VideoPredictor(SAM2Base):
         start_frame_idx=None,
         max_frame_num_to_track=None,
         reverse=False,
+        progress: bool = True,
     ):
         """Propagate the input points across frames to track in the entire video."""
         self.propagate_in_video_preflight(inference_state)
@@ -640,6 +641,7 @@ class SAM2VideoPredictor(SAM2Base):
             processing_order,
             desc=f"Propagating (reverse={reverse})",
             leave=False,
+            disable=not progress,
         ):
             pred_masks_per_obj = [None] * batch_size
             for obj_idx in range(batch_size):
