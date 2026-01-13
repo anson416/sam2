@@ -575,8 +575,8 @@ class SAM2VideoPredictor(SAM2Base):
                     obj_output_dict[storage_key][frame_idx] = out
                     if self.clear_non_cond_mem_around_input:
                         # clear non-conditioning memory of the surrounding frames
-                        self._clear_obj_non_cond_mem_around_input(
-                            inference_state, frame_idx, obj_idx
+                        self._clear_non_cond_mem_around_input(
+                            inference_state, frame_idx
                         )
 
                 # clear temporary outputs in `temp_output_dict_per_obj`
